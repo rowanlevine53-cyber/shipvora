@@ -1,0 +1,635 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Shipvora courier tracking API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: tracking
+    description: Public tracking operations
+  - name: admin
+    description: Admin operations (authentication required)
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /tracking/{trackingNumber}:
+    get:
+      operationId: getTracking
+      tags: [tracking]
+      summary: Get tracking info by tracking number
+      parameters:
+        - name: trackingNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tracking info found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /quote-requests:
+    post:
+      operationId: submitQuoteRequest
+      tags: [tracking]
+      summary: Submit a quote / contact request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteRequestInput"
+      responses:
+        "201":
+          description: Quote request received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/logout:
+    post:
+      operationId: adminLogout
+      tags: [admin]
+      summary: Admin logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/me:
+    get:
+      operationId: adminMe
+      tags: [admin]
+      summary: Get current admin session
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/quote-requests:
+    get:
+      operationId: listQuoteRequests
+      tags: [admin]
+      summary: List all quote requests
+      responses:
+        "200":
+          description: List of quote requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuoteRequest"
+
+  /admin/quote-requests/{id}:
+    patch:
+      operationId: markQuoteRequestRead
+      tags: [admin]
+      summary: Mark a quote request as read or unread
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteRequestUpdate"
+      responses:
+        "200":
+          description: Updated quote request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuoteRequest"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteQuoteRequest
+      tags: [admin]
+      summary: Delete a quote request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/shipments:
+    get:
+      operationId: listShipments
+      tags: [admin]
+      summary: List all shipments
+      responses:
+        "200":
+          description: List of shipments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+    post:
+      operationId: createShipment
+      tags: [admin]
+      summary: Create a new shipment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShipmentInput"
+      responses:
+        "201":
+          description: Shipment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/shipments/{id}:
+    get:
+      operationId: getShipment
+      tags: [admin]
+      summary: Get a shipment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Shipment found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShipmentWithEvents"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateShipment
+      tags: [admin]
+      summary: Update a shipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShipmentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteShipment
+      tags: [admin]
+      summary: Delete a shipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/shipments/{id}/events:
+    post:
+      operationId: addTrackingEvent
+      tags: [admin]
+      summary: Add a tracking event to a shipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackingEventInput"
+      responses:
+        "201":
+          description: Event added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingEvent"
+        "404":
+          description: Shipment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/events/{id}:
+    put:
+      operationId: updateTrackingEvent
+      tags: [admin]
+      summary: Update a tracking event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackingEventUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackingEvent"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteTrackingEvent
+      tags: [admin]
+      summary: Delete a tracking event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    AdminLoginInput:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    AdminSession:
+      type: object
+      properties:
+        username:
+          type: string
+        loggedIn:
+          type: boolean
+      required:
+        - username
+        - loggedIn
+
+    TrackingEventStatus:
+      type: string
+      enum:
+        - packed
+        - shipped
+        - dispatched
+        - out_for_delivery
+        - held_by_customs
+        - delivered
+
+    TrackingEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        shipmentId:
+          type: integer
+        status:
+          $ref: "#/components/schemas/TrackingEventStatus"
+        location:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+        timestamp:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - shipmentId
+        - status
+        - timestamp
+        - createdAt
+
+    Shipment:
+      type: object
+      properties:
+        id:
+          type: integer
+        trackingNumber:
+          type: string
+        recipientName:
+          type: string
+        origin:
+          type: ["string", "null"]
+        destination:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - trackingNumber
+        - recipientName
+        - createdAt
+        - updatedAt
+
+    ShipmentWithEvents:
+      allOf:
+        - $ref: "#/components/schemas/Shipment"
+        - type: object
+          properties:
+            events:
+              type: array
+              items:
+                $ref: "#/components/schemas/TrackingEvent"
+          required:
+            - events
+
+    TrackingResult:
+      allOf:
+        - $ref: "#/components/schemas/Shipment"
+        - type: object
+          properties:
+            events:
+              type: array
+              items:
+                $ref: "#/components/schemas/TrackingEvent"
+          required:
+            - events
+
+    ShipmentInput:
+      type: object
+      properties:
+        recipientName:
+          type: string
+          minLength: 1
+        origin:
+          type: string
+        destination:
+          type: string
+        description:
+          type: string
+      required:
+        - recipientName
+
+    ShipmentUpdate:
+      type: object
+      properties:
+        recipientName:
+          type: string
+          minLength: 1
+        origin:
+          type: ["string", "null"]
+        destination:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+
+    TrackingEventInput:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/TrackingEventStatus"
+        location:
+          type: string
+        note:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - timestamp
+
+    TrackingEventUpdate:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/TrackingEventStatus"
+        location:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+        timestamp:
+          type: string
+          format: date-time
+
+    QuoteRequestInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        message:
+          type: string
+          minLength: 1
+      required:
+        - name
+        - email
+        - message
+
+    QuoteRequestUpdate:
+      type: object
+      properties:
+        isRead:
+          type: boolean
+      required:
+        - isRead
+
+    QuoteRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - message
+        - isRead
+        - createdAt
