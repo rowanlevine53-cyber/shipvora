@@ -1,0 +1,8 @@
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm install --no-frozen-lockfile && pnpm run typecheck:libs && BASE_PATH=/ pnpm --filter @workspace/courier-app run build"
+
+[deploy]
+startCommand = "npx serve -s artifacts/courier-app/dist/public -l $PORT"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
